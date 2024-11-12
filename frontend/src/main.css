@@ -1,0 +1,20 @@
+/* Customize the submenu to pop to the right on hover */
+.ant-menu-inline .ant-menu-submenu:hover > .ant-menu-submenu-popup {
+  left: 250px; /* Adjust based on the width of the sidebar */
+  top: 0;
+  transform: none; /* Remove any transformation (like moving down) */
+}
+
+.ant-menu-inline .ant-menu-submenu-popup {
+  transform: translateX(0) !important; /* Ensure it doesn't move down */
+}
+
+/* Ensure the submenu is aligned correctly */
+.ant-menu-submenu-popup {
+  right: -1px !important; /* Make sure the submenu aligns to the right */
+}
+
+/* Optionally, add a transition effect to the submenu */
+.ant-menu-submenu-popup {
+  transition: left 0.2s ease-in-out, top 0.2s ease-in-out;
+}

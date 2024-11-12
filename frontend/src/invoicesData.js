@@ -1,0 +1,38 @@
+export const data = [
+  {
+    key: "1",
+    invoice_number: "INV-001",
+    customer_name: "John Doe",
+    invoice_date: "2024-10-01",
+    amount: 250.75,
+    status: "Paid",
+    due_date: "2024-10-15",
+  },
+  {
+    key: "2",
+    invoice_number: "INV-002",
+    customer_name: "Jane Smith",
+    invoice_date: "2024-09-25",
+    amount: 450.0,
+    status: "Pending",
+    due_date: "2024-10-10",
+  },
+  {
+    key: "3",
+    invoice_number: "INV-003",
+    customer_name: "Emily Johnson",
+    invoice_date: "2024-08-30",
+    amount: 132.5,
+    status: "Paid",
+    due_date: "2024-09-15",
+  },
+  {
+    key: "4",
+    invoice_number: "INV-004",
+    customer_name: "Michael Brown",
+    invoice_date: "2024-07-20",
+    amount: 1000.0,
+    status: "Pending",
+    due_date: "2024-08-05",
+  },
+];
