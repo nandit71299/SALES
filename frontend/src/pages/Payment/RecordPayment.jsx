@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   setFieldValue,
@@ -6,7 +6,14 @@ import {
   setSubmitted,
   setError,
 } from "../../redux/formSlice";
+import {
+  fetchAllInvoices,
+  selectAllInvoices,
+  selectIsLoading,
+  selectError,
+} from "../../redux/dataSlice"; // Import the thunk and selectors
 import { message } from "antd";
+import { recordPayment } from "../../redux/formSlice"; // Import the recordPayment thunk
 
 function RecordPayment() {
   const dispatch = useDispatch();
@@ -16,13 +23,17 @@ function RecordPayment() {
   const errors = useSelector((state) => state.form.errors?.payment); // Safely access errors
   const isSubmitting = useSelector((state) => state.form.isSubmitting);
   const isSubmitted = useSelector((state) => state.form.isSubmitted);
+  const invoiceState = payment.invoice;
 
-  // Simulating a list of invoices as demo data
-  const invoices = [
-    { id: "1", invoiceNumber: "INV123", client: "John Doe" },
-    { id: "2", invoiceNumber: "INV124", client: "Jane Smith" },
-    { id: "3", invoiceNumber: "INV125", client: "Emily Johnson" },
-  ];
+  // Fetch invoices from Redux
+  const invoices = useSelector(selectAllInvoices);
+  const isLoading = useSelector(selectIsLoading);
+  const error = useSelector(selectError);
+
+  // Fetch invoices when the component is mounted
+  useEffect(() => {
+    dispatch(fetchAllInvoices());
+  }, [dispatch]);
 
   // Handle form field changes
   const handleChange = (e) => {
@@ -56,6 +67,16 @@ function RecordPayment() {
           formName: "payment",
           field: "amount",
           message: "Amount is required.",
+        })
+      );
+      isValid = false;
+    }
+    if (payment.amount > selectedInvoice.amount) {
+      dispatch(
+        setError({
+          formName: "payment",
+          field: "amount",
+          message: "Amount cannot be greater than invoice amount.",
         })
       );
       isValid = false;
@@ -96,17 +117,32 @@ function RecordPayment() {
     // Start form submission
     dispatch(setSubmitting());
 
-    // Simulate form submission (e.g., API call)
-    setTimeout(() => {
-      const success = true; // Simulate success or failure
+    // Prepare payment data
+    const paymentData = {
+      invoice_id: payment.invoice,
+      amount: payment.amount,
+      payment_mode: payment.paymentMode,
+      reference_number: payment.referenceNo,
+    };
 
-      if (success) {
+    // Dispatch recordPayment thunk
+    dispatch(recordPayment(paymentData))
+      .unwrap()
+      .then(() => {
+        // On success, show success message and set form to submitted
         message.success("Payment Recorded Successfully");
+
         setTimeout(() => {
           dispatch(setSubmitted());
           window.location.href = "/payments"; // Redirect to another page after success
         }, 2000);
-      } else {
+      })
+      .catch((err) => {
+        // On failure, show error message
+        console.log(err);
+        message.error(
+          err?.message || "An error occurred while recording payment."
+        );
         dispatch(
           setError({
             formName: "payment",
@@ -114,9 +150,23 @@ function RecordPayment() {
             message: "An error occurred during payment recording.",
           })
         );
-      }
-    }, 2000); // Simulate API delay
+      });
   };
+
+  // If loading invoices or an error occurred, show respective messages
+  if (isLoading) {
+    return <div>Loading invoices...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  // Find the selected invoice
+  const selectedInvoice = invoices.find(
+    (invoice) => Number(invoice.id) === Number(payment.invoice)
+  );
+  console.log(selectedInvoice);
 
   return (
     <div className="container mt-5">
@@ -142,12 +192,26 @@ function RecordPayment() {
               required
             >
               <option value="">Select Invoice</option>
-              {invoices.map((invoice) => (
-                <option key={invoice.id} value={invoice.id}>
-                  {invoice.invoiceNumber} - {invoice.client}
-                </option>
-              ))}
+              {invoices.map((invoice) => {
+                return (
+                  <option key={invoice.id} value={invoice.id}>
+                    {invoice.invoice_number}
+                  </option>
+                );
+              })}
             </select>
+
+            {/* Display selected invoice details */}
+            {selectedInvoice ? (
+              <div className="text-muted mt-2">
+                <p>Invoice Amount: {selectedInvoice.amount}</p>
+              </div>
+            ) : (
+              <div className="text-muted mt-2">
+                <p className="mt-5"></p>
+              </div>
+            )}
+
             {errors?.invoice && (
               <div className="text-danger">{errors.invoice}</div>
             )}
@@ -163,6 +227,7 @@ function RecordPayment() {
               value={payment.amount}
               onChange={handleChange}
               required
+              disabled={selectedInvoice ? false : true}
             />
             {errors?.amount && (
               <div className="text-danger">{errors.amount}</div>
@@ -178,6 +243,7 @@ function RecordPayment() {
               value={payment.paymentMode}
               onChange={handleChange}
               required
+              disabled={selectedInvoice ? false : true}
             >
               <option value="">Select Payment Mode</option>
               <option value="creditCard">Credit Card</option>
@@ -203,6 +269,7 @@ function RecordPayment() {
               value={payment.referenceNo}
               onChange={handleChange}
               required
+              disabled={selectedInvoice ? false : true}
             />
             {errors?.referenceNo && (
               <div className="text-danger">{errors.referenceNo}</div>
@@ -217,6 +284,7 @@ function RecordPayment() {
               className="form-control"
               value={payment.description}
               onChange={handleChange}
+              disabled={selectedInvoice ? false : true}
             />
             {errors?.description && (
               <div className="text-danger">{errors.description}</div>

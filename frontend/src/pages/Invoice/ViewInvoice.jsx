@@ -1,46 +1,60 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useParams } from "react-router-dom"; // Import useParams to access the URL params
 import {
   ArrowLeftOutlined,
   FilePdfOutlined,
   MailOutlined,
 } from "@ant-design/icons";
-import { Divider, Table, Button } from "antd";
-import { data as invoiceData } from "../../invoicesData";
+import { Divider, Table, Button, Spin, message } from "antd";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchInvoiceData,
+  selectIndividualInvoice,
+  selectIsLoading,
+  selectError,
+} from "../../redux/dataSlice"; // Import the necessary actions and selectors
 
 function ViewInvoice() {
   // Get the invoice ID from the URL
   const { id } = useParams();
+  const dispatch = useDispatch();
 
-  // Example: Sample invoice details based on the ID
-  //   const invoiceData = {
-  //     key: "1",
-  //     invoice_number: "INV-001",
-  //     customer_name: "John Doe",
-  //     invoice_date: "2024-10-01",
-  //     amount: 250.75,
-  //     status: "Paid",
-  //     due_date: "2024-10-15",
-  //   };
+  // Select the state for individual invoice, loading and error
+  const invoiceData = useSelector(selectIndividualInvoice);
+  const isLoading = useSelector(selectIsLoading);
+  const error = useSelector(selectError);
 
-  // Sample product data for the invoice
-  const productData = [
-    {
-      key: "1",
-      product: "Product A",
-      quantity: 10,
-      price: 1000,
-      total: 10000,
-    },
-    {
-      key: "2",
-      product: "Product B",
-      quantity: 5,
-      price: 500,
-      total: 2500,
-    },
-  ];
+  console.log(invoiceData);
+  // Fetch the invoice data on component mount
+  useEffect(() => {
+    dispatch(fetchInvoiceData(id));
+  }, [dispatch, id]);
 
+  // If the invoice data is being fetched, show a loading spinner
+  if (isLoading) {
+    return (
+      <div
+        className="d-flex justify-content-center align-items-center"
+        style={{ height: "100vh" }}
+      >
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  // Handle any errors that occur during the fetch
+  if (error) {
+    message.error("Failed to load invoice data: " + error);
+    return <div>Something went wrong. Please try again later.</div>;
+  }
+
+  // If no invoice data is found, show a message
+  if (!invoiceData) {
+    return <div>No invoice found with this ID.</div>;
+  }
+
+  // Sample product data for the invoice (replace with actual data from API)
+  const productData = invoiceData.products || []; // Assuming items array is present in invoiceData
   const totalAmount = productData.reduce((acc, item) => acc + item.total, 0);
 
   return (
@@ -48,12 +62,21 @@ function ViewInvoice() {
       <div className="d-flex justify-content-between align-items-center">
         <div className="d-flex align-items-center gap-3">
           <Button className="btn p-0" type="link">
-            <ArrowLeftOutlined />
+            <ArrowLeftOutlined
+              onClick={() => {
+                window.location = "/invoices";
+              }}
+            />
           </Button>
           <h6 className="m-0">Invoice No: {invoiceData.invoice_number}</h6>
         </div>
         <div className="d-flex gap-2">
-          <Button className="btn btn-primary">
+          <Button
+            className="btn btn-primary"
+            onClick={() =>
+              (window.location = `http://localhost:3000/api/invoices/generatePdf/${id}`)
+            }
+          >
             <FilePdfOutlined /> Download PDF
           </Button>
           <Button className="btn btn-outline-dark">
@@ -65,26 +88,32 @@ function ViewInvoice() {
       <div className="d-flex gap-5 justify-content-start align-items-center">
         <div className="d-flex flex-column">
           <h6 className="text-muted">Status</h6>
-          <h4>{invoiceData.status}</h4>
+          <h4>
+            {invoiceData.status == 1
+              ? "Sent"
+              : invoiceData.status == 2
+              ? "Paid"
+              : invoiceData.status == 3
+              ? "Cancelled"
+              : "Unknown"}
+          </h4>
         </div>
         <div className="d-flex flex-column">
           <h6 className="text-muted">Total</h6>
-          <h4>₹{totalAmount.toFixed(2)}</h4>
+          <h4>₹{invoiceData.amount.toFixed(2)}</h4>
         </div>
       </div>
       <Divider dashed />
 
       <div>
-        <h6>Client Name: {invoiceData.customer_name}</h6>
+        <h6>Client Name: {invoiceData.client.name}</h6>
         <div className="d-flex justify-content-between">
-          <p className="text-muted">
-            Address: <b>134, Avenue St. Luxemburg, UK.</b>
+          <p>
+            Email: <b>{invoiceData.client.email}</b>
           </p>
           <p>
-            Email: <b>example@example.com</b>
-          </p>
-          <p>
-            Phone: <b>+91 9664846228</b>
+            Phone:{" "}
+            <b>{invoiceData?.client?.phone ? invoiceData.client.phone : "-"}</b>
           </p>
         </div>
       </div>
@@ -93,7 +122,7 @@ function ViewInvoice() {
         columns={[
           {
             title: "Product",
-            dataIndex: "product",
+            dataIndex: "name",
             key: "product",
           },
           {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   setFieldValue,
@@ -7,6 +7,7 @@ import {
   setError,
 } from "../../redux/formSlice";
 import { message, Button } from "antd";
+import { submitClient } from "../../redux/formSlice"; // Import the thunk
 
 function CreateClient() {
   const dispatch = useDispatch();
@@ -30,7 +31,13 @@ function CreateClient() {
 
     // Clear previous errors for this form
     Object.keys(errors).forEach((field) => {
-      dispatch(setError({ formName: "client", field, message: "" }));
+      dispatch(
+        setError({
+          formName: "client",
+          field,
+          message: `Please correct ${field} field`,
+        })
+      );
     });
 
     // Simple validation: check if required fields are filled
@@ -44,42 +51,13 @@ function CreateClient() {
       );
       isValid = false;
     }
-    if (!fieldValue.contact) {
-      dispatch(
-        setError({
-          formName: "client",
-          field: "contact",
-          message: "Contact person is required.",
-        })
-      );
-      isValid = false;
-    }
-    if (!fieldValue.phone) {
-      dispatch(
-        setError({
-          formName: "client",
-          field: "phone",
-          message: "Phone number is required.",
-        })
-      );
-      isValid = false;
-    }
+
     if (!fieldValue.email) {
       dispatch(
         setError({
           formName: "client",
           field: "email",
           message: "Email is required.",
-        })
-      );
-      isValid = false;
-    }
-    if (!fieldValue.website) {
-      dispatch(
-        setError({
-          formName: "client",
-          field: "website",
-          message: "Website URL is required.",
         })
       );
       isValid = false;
@@ -97,32 +75,28 @@ function CreateClient() {
       return; // Prevent submission if validation fails
     }
 
-    // Log the entire form data
-    console.log("Form Data from Redux State: ", formData);
-
     // Start form submission process
     dispatch(setSubmitting());
 
-    // Simulate form submission
-    setTimeout(() => {
-      const success = true; // Simulate success
+    // Dispatch the submitClient thunk to handle the actual submission
+    dispatch(submitClient(formData)).then((result) => {
+      if (result.meta.requestStatus === "fulfilled") {
+        // Success
 
-      if (success) {
+        // Update Redux state to indicate successful submission
+        dispatch(setSubmitted());
+        // Optionally redirect after successful submission
         message.success("Client Created Successfully");
         setTimeout(() => {
-          dispatch(setSubmitted());
-          window.location.href = "/clients"; // Redirect after submission
+          window.location.href = "/clients";
         }, 2000);
       } else {
-        dispatch(
-          setError({
-            formName: "client",
-            field: "form",
-            message: "An error occurred during form submission.",
-          })
+        // Failure
+        message.error(
+          result.payload?.form || "An error occurred while creating the client."
         );
       }
-    }, 2000); // Simulate delay
+    });
   };
 
   return (
@@ -154,30 +128,17 @@ function CreateClient() {
             <label htmlFor="contact" className="form-label mt-3">
               Contact Person:
             </label>
-            <input
-              type="text"
-              id="contact"
-              name="contact"
-              className="form-control"
-              value={fieldValue.contact}
-              onChange={handleChange}
-              required
-            />
-            {errors?.contact && (
-              <div className="text-danger">{errors.contact}</div>
-            )}
 
             <label htmlFor="phone" className="form-label mt-3">
               Phone:
             </label>
             <input
-              type="text"
+              type="number"
               id="phone"
               name="phone"
               className="form-control"
               value={fieldValue.phone}
               onChange={handleChange}
-              required
             />
             {errors?.phone && <div className="text-danger">{errors.phone}</div>}
           </div>
@@ -208,7 +169,6 @@ function CreateClient() {
               className="form-control"
               value={fieldValue.website}
               onChange={handleChange}
-              required
             />
             {errors?.website && (
               <div className="text-danger">{errors.website}</div>

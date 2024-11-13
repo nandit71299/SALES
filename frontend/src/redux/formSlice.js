@@ -1,8 +1,14 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
 
-// Initial state for each form
+const FORM_NAMES = {
+  INVOICE: "invoice",
+  PAYMENT: "payment",
+  CLIENT: "client",
+};
+
 const initialState = {
-  invoice: {
+  [FORM_NAMES.INVOICE]: {
     invoiceNumber: "",
     poNumber: "",
     invoiceDate: "",
@@ -10,16 +16,16 @@ const initialState = {
     status: "",
     expiryDate: "",
     note: "",
-    items: [{ key: 1, item: "", quantity: 0, price: 0, total: 0 }], // Initialize with one empty item
+    items: [],
   },
-  payment: {
+  [FORM_NAMES.PAYMENT]: {
     invoice: "",
     amount: "",
     paymentMode: "",
     referenceNo: "",
     description: "",
   },
-  client: {
+  [FORM_NAMES.CLIENT]: {
     name: "",
     phone: "",
     email: "",
@@ -28,7 +34,7 @@ const initialState = {
   isSubmitted: false,
   isSubmitting: false,
   errors: {
-    invoice: {
+    [FORM_NAMES.INVOICE]: {
       invoiceNumber: "",
       poNumber: "",
       invoiceDate: "",
@@ -38,14 +44,14 @@ const initialState = {
       note: "",
       items: "",
     },
-    payment: {
+    [FORM_NAMES.PAYMENT]: {
       invoice: "",
       amount: "",
       paymentMode: "",
       referenceNo: "",
       description: "",
     },
-    client: {
+    [FORM_NAMES.CLIENT]: {
       name: "",
       phone: "",
       email: "",
@@ -57,87 +63,185 @@ const initialState = {
 // Helper function to get form state by name
 const getFormState = (state, formName) => state.form[formName] || {};
 
+export const recordPayment = createAsyncThunk(
+  "form/recordPayment",
+  async (paymentData, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/api/payments/recordPayment",
+        paymentData
+      );
+      if (response.data.success) {
+        return response.data; // Return the success response data
+      } else {
+        return rejectWithValue({
+          form: "An error occurred while recording the payment.",
+        });
+      }
+    } catch (error) {
+      return rejectWithValue({
+        form: error.response ? error.response.data : error.message,
+      });
+    }
+  }
+);
+
+export const createInvoice = createAsyncThunk(
+  "form/createInvoice",
+  async (invoiceData, { rejectWithValue }) => {
+    console.log(invoiceData);
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/api/invoices/create",
+        invoiceData
+      );
+      if (response.data.success) {
+        return response.data;
+      } else {
+        return rejectWithValue({
+          form: "An error occurred while creating the invoice.",
+        });
+      }
+    } catch (error) {
+      return rejectWithValue({
+        form: error.response ? error.response.data : error.message,
+      });
+    }
+  }
+);
+
+export const submitClient = createAsyncThunk(
+  "form/submitClient",
+  async (formData, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/api/client/createClient",
+        formData
+      );
+      if (response.data.success) {
+        return response.data;
+      } else {
+        return rejectWithValue({
+          form: "An error occurred while creating the client.",
+        });
+      }
+    } catch (error) {
+      return rejectWithValue({
+        form: error.response ? error.response.data : error.message,
+      });
+    }
+  }
+);
+
 const formSlice = createSlice({
   name: "form",
   initialState,
   reducers: {
-    // Set specific field value for a specific form
     setFieldValue: (state, action) => {
       const { formName, field, value } = action.payload;
-      if (formName === "invoice" && field === "items") {
-        // If it's items, we need to update the array of items
+      if (formName === FORM_NAMES.INVOICE && field === "items") {
         state[formName][field] = value;
       } else {
         state[formName][field] = value;
       }
     },
-
-    // Set submitting state
     setSubmitting: (state) => {
       state.isSubmitting = true;
-      state.errors = {}; // Clear previous errors
+      state.errors = {};
     },
-
-    // Set form submitted state
     setSubmitted: (state) => {
       state.isSubmitting = false;
       state.isSubmitted = true;
     },
-
-    // Set error message for a specific field
     setError: (state, action) => {
       const { formName, field, message } = action.payload;
-      state.errors[formName][field] = message;
+      if (
+        state.errors[formName] &&
+        typeof state.errors[formName] === "object"
+      ) {
+        state.errors[formName][field] = message;
+      } else {
+        console.error(`Error state for ${formName} is not an object.`);
+      }
     },
-
-    // Reset form state by form name
     resetForm: (state, action) => {
       const { formName } = action.payload;
-      state[formName] = initialState[formName]; // Reset the specific form
+      state[formName] = initialState[formName];
     },
-
-    // Reset all forms to their initial states
     resetAllForms: (state) => {
       return initialState;
     },
-
-    // Add a new item to the invoice
     addItem: (state) => {
       const newItem = {
-        key: state.invoice.items.length + 1,
-        item: "",
+        id: state[FORM_NAMES.INVOICE].items.length + 1,
+        name: "",
         quantity: 0,
         price: 0,
         total: 0,
       };
-      state.invoice.items.push(newItem);
+      state[FORM_NAMES.INVOICE].items.push(newItem);
     },
-
-    // Remove an item from the invoice
     removeItem: (state, action) => {
       const { key } = action.payload;
-      state.invoice.items = state.invoice.items.filter(
+      state[FORM_NAMES.INVOICE].items = state[FORM_NAMES.INVOICE].items.filter(
         (item) => item.key !== key
       );
     },
-
-    // Update an item field (e.g., item name, quantity, price)
     updateItem: (state, action) => {
       const { key, field, value } = action.payload;
-      const item = state.invoice.items.find((item) => item.key === key);
+      const item = state[FORM_NAMES.INVOICE].items.find(
+        (item) => item.key === key
+      );
       if (item) {
         item[field] = value;
-
-        // If quantity or price changes, update the total
         if (field === "quantity" || field === "price") {
           item.total = item.quantity * item.price;
         }
       }
     },
   },
+  extraReducers: (builder) => {
+    builder
+      .addCase(submitClient.pending, (state) => {
+        state.isSubmitting = true;
+        state.errors = {};
+      })
+      .addCase(submitClient.fulfilled, (state) => {
+        state.isSubmitting = false;
+        state.isSubmitted = true;
+      })
+      .addCase(submitClient.rejected, (state, action) => {
+        state.isSubmitting = false;
+        state.errors[FORM_NAMES.CLIENT] = action.payload;
+      })
+      .addCase(createInvoice.pending, (state) => {
+        state.isSubmitting = true;
+        state.errors = {};
+      })
+      .addCase(createInvoice.fulfilled, (state) => {
+        state.isSubmitting = false;
+        state.isSubmitted = true;
+      })
+      .addCase(createInvoice.rejected, (state, action) => {
+        state.isSubmitting = false;
+        state.errors[FORM_NAMES.INVOICE] = action.payload;
+      })
+      // Add the case for recording a payment
+      .addCase(recordPayment.pending, (state) => {
+        state.isSubmitting = true;
+        state.errors = {};
+      })
+      .addCase(recordPayment.fulfilled, (state) => {
+        state.isSubmitting = false;
+        state.isSubmitted = true;
+      })
+      .addCase(recordPayment.rejected, (state, action) => {
+        state.isSubmitting = false;
+        state.errors[FORM_NAMES.PAYMENT] = action.payload;
+      });
+  },
 });
 
-// Actions
 export const {
   setFieldValue,
   setSubmitting,
@@ -150,7 +254,6 @@ export const {
   updateItem,
 } = formSlice.actions;
 
-// Selector to get the form state
 export const selectFormState = (formName) => (state) =>
   getFormState(state, formName);
 

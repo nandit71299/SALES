@@ -1,8 +1,19 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Table } from "antd";
-import { data } from "../../clientsData"; // Import your clients data
+import {
+  fetchAllClients,
+  selectAllClients,
+  selectIsLoading,
+  selectError,
+} from "../../redux/dataSlice"; // Adjust path
 
 function Clients() {
+  const dispatch = useDispatch();
+  const clients = useSelector(selectAllClients); // Get all clients from Redux state
+  const isLoading = useSelector(selectIsLoading);
+  const error = useSelector(selectError);
+
   // Columns for the table
   const columns = [
     {
@@ -36,14 +47,22 @@ function Clients() {
     },
   ];
 
+  useEffect(() => {
+    // Fetch all clients when the component is mounted
+    dispatch(fetchAllClients());
+  }, [dispatch]);
+
+  if (error) return <div>Error: {error}</div>;
+
   return (
     <div>
       <h2>Clients</h2>
       <Table
-        dataSource={data.clients} // Access the 'clients' array from the imported data
+        dataSource={clients} // Use the clients data from Redux store
         columns={columns}
         rowKey="id" // Use the 'id' field as the row key
         scroll={{ x: "max-content" }}
+        loading={isLoading}
       />
     </div>
   );

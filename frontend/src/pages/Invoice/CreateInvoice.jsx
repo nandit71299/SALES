@@ -1,28 +1,45 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   setFieldValue,
   setSubmitting,
   setSubmitted,
   setError,
+  addItem,
+  removeItem,
+  updateItem,
 } from "../../redux/formSlice";
 import { message, Table, Button } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
+import { createInvoice } from "../../redux/formSlice";
+import { fetchAllClients } from "../../redux/dataSlice"; // Import the action to fetch clients
+import moment from "moment";
+import { DatePicker } from "antd";
 
 function CreateInvoice() {
   const dispatch = useDispatch();
 
   // Fetching form field values and errors for "invoice"
   const formData = useSelector((state) => state.form.invoice);
-  const fieldValue = useSelector((state) => state.form.invoice);
+  const fieldValue = formData;
   const isSubmitting = useSelector((state) => state.form.isSubmitting);
   const isSubmitted = useSelector((state) => state.form.isSubmitted);
   const errors = useSelector((state) => state.form.errors.invoice) || {}; // Safe access
+  const items = formData.items;
+  useEffect(() => {
+    console.log(items);
+  }, []);
 
-  // State to manage invoice items dynamically
-  const [items, setItems] = useState([
-    { key: 1, item: "", quantity: 0, price: 0, total: 0 },
-  ]);
+  // Fetch all clients from Redux
+  const { allClients, isLoading, error } = useSelector((state) => state.data);
+
+  // Dispatch action to fetch clients when the component mounts
+  useEffect(() => {
+    dispatch(fetchAllClients());
+  }, [dispatch]);
+  useEffect(() => {
+    console.log(items);
+  }, [items]);
 
   // Handle form field changes
   const handleChange = (e) => {
@@ -33,34 +50,17 @@ function CreateInvoice() {
   // Handle changes in item fields (Item, Quantity, Price)
   const handleItemChange = (e, index) => {
     const { name, value } = e.target;
-    const updatedItems = [...items];
-    updatedItems[index][name] = value;
-
-    // Calculate total for this item
-    if (name === "quantity" || name === "price") {
-      updatedItems[index].total =
-        updatedItems[index].quantity * updatedItems[index].price;
-    }
-
-    setItems(updatedItems);
+    dispatch(updateItem({ id: items[index].key, field: name, value }));
   };
 
   // Add a new row to the items table
-  const addItem = () => {
-    const newItem = {
-      key: items.length + 1,
-      item: "",
-      quantity: 0,
-      price: 0,
-      total: 0,
-    };
-    setItems([...items, newItem]);
+  const addItemHandler = () => {
+    dispatch(addItem());
   };
 
   // Remove a row from the items table
   const handleRemoveItem = (key) => {
-    const updatedItems = items.filter((item) => item.key !== key);
-    setItems(updatedItems);
+    dispatch(removeItem({ key }));
   };
 
   // Validation function to check if required fields are filled
@@ -104,45 +104,112 @@ function CreateInvoice() {
       isValid = false;
     }
 
+    // Validate items: ensure each item has valid fields
+    if (
+      items.length === 0 ||
+      items.some((item) => !item.name || item.quantity <= 0 || item.price <= 0)
+    ) {
+      dispatch(
+        setError({
+          formName: "invoice",
+          field: "items",
+          message:
+            "All items must have a valid name, quantity (greater than 0), and price (greater than 0).",
+        })
+      );
+      isValid = false;
+    }
+
+    // Additional check to ensure total calculation is valid
+    items.forEach((item, index) => {
+      if (item.quantity <= 0) {
+        dispatch(
+          setError({
+            formName: "invoice",
+            field: `items[${index}].quantity`,
+            message: "Quantity must be greater than 0.",
+          })
+        );
+        isValid = false;
+      }
+      if (item.price <= 0) {
+        dispatch(
+          setError({
+            formName: "invoice",
+            field: `items[${index}].price`,
+            message: "Price must be greater than 0.",
+          })
+        );
+        isValid = false;
+      }
+      if (!item.name) {
+        dispatch(
+          setError({
+            formName: "invoice",
+            field: `items[${index}].item`,
+            message: "Item name is required.",
+          })
+        );
+        isValid = false;
+      }
+    });
+
     return isValid;
   };
 
   // Handle form submission
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validate form before submitting
     if (!validateForm()) {
+      console.log("Validation failed, not submitting");
       return; // Prevent submission if validation fails
     }
 
-    // Log the entire form data (including items)
-    console.log("Form Data from Redux State: ", { ...formData, items });
+    // Collect the invoice data from the state
+    const invoiceData = {
+      invoice_number: fieldValue.invoiceNumber,
+      invoice_date: fieldValue.invoiceDate,
+      client_id: Number(fieldValue.client),
+      amount: items.reduce((total, item) => total + item.total, 0), // Sum of all item totals
+      status: fieldValue.status,
+      due_date: fieldValue.expiryDate,
+      items: items, // Now using items from Redux state
+    };
 
     // Start form submission process
     dispatch(setSubmitting());
 
-    // Simulate form submission
-    setTimeout(() => {
-      const success = true; // Simulate success
-
-      if (success) {
-        message.success("Form Submitted Successfully");
+    // Dispatch createInvoice thunk
+    try {
+      const resultAction = await dispatch(createInvoice(invoiceData));
+      if (createInvoice.fulfilled.match(resultAction)) {
+        // Invoice created successfully
+        message.success("Invoice Created Successfully");
         setTimeout(() => {
           dispatch(setSubmitted());
           window.location.href = "/invoices"; // Redirect after submission
         }, 2000);
       } else {
+        // Handle error from API response
         dispatch(
           setError({
             formName: "invoice",
             field: "form",
-            message: "An error occurred during form submission.",
+            message: resultAction.payload.form || "An error occurred.",
           })
         );
       }
-    }, 2000); // Simulate delay
+    } catch (error) {
+      dispatch(
+        setError({
+          formName: "invoice",
+          field: "form",
+          message: "An error occurred during invoice creation.",
+        })
+      );
+    }
   };
 
   // Define columns for Ant Design table
@@ -154,7 +221,7 @@ function CreateInvoice() {
       render: (text, record, index) => (
         <input
           type="text"
-          name="item"
+          name="name"
           value={text}
           onChange={(e) => handleItemChange(e, index)}
           className="form-control"
@@ -241,9 +308,9 @@ function CreateInvoice() {
             </label>
             <input
               type="text"
+              className="form-control"
               id="poNumber"
               name="poNumber"
-              className="form-control"
               value={fieldValue.poNumber}
               onChange={handleChange}
               required
@@ -252,133 +319,111 @@ function CreateInvoice() {
               <div className="text-danger">{errors.poNumber}</div>
             )}
 
+            <label htmlFor="client" className="form-label mt-3">
+              Client:
+            </label>
+            <select
+              className="form-control"
+              id="client"
+              name="client"
+              value={fieldValue.client}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select Client</option>
+              {allClients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+            {errors?.client && (
+              <div className="text-danger">{errors.client}</div>
+            )}
+          </div>
+
+          {/* Right Column */}
+          <div className="col-md-6">
+            <label htmlFor="status" className="form-label">
+              Status:
+            </label>
+            <select
+              className="form-control"
+              id="status"
+              name="status"
+              value={fieldValue.status}
+              onChange={handleChange}
+            >
+              <option value="">Select Status</option>
+              <option value="1">Draft</option>
+              <option value="2">Sent</option>
+              <option value="3">Paid</option>
+            </select>
+
+            {/* Invoice Date */}
             <label htmlFor="invoiceDate" className="form-label mt-3">
               Invoice Date:
             </label>
             <input
               type="date"
-              id="invoiceDate"
               name="invoiceDate"
-              className="form-control"
-              value={fieldValue.invoiceDate}
-              onChange={handleChange}
               required
+              className="form-control"
+              onChange={handleChange}
             />
             {errors?.invoiceDate && (
               <div className="text-danger">{errors.invoiceDate}</div>
             )}
-          </div>
 
-          {/* Right Column */}
-          <div className="col-md-6 mb-3">
-            <label htmlFor="client" className="form-label">
-              Client:
-            </label>
-            <select
-              id="client"
-              name="client"
-              className="form-select"
-              value={fieldValue.client}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select customer</option>
-              <option value="1">John Doe</option>
-              <option value="2">Jane Smith</option>
-              <option value="3">Emily Johnson</option>
-            </select>
-            {errors?.client && (
-              <div className="text-danger">{errors.client}</div>
-            )}
-
-            <label htmlFor="status" className="form-label mt-3">
-              Status:
-            </label>
-            <select
-              id="status"
-              name="status"
-              className="form-select"
-              value={fieldValue.status}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select status</option>
-              <option value="1">Sent</option>
-              <option value="2">Paid</option>
-              <option value="3">Cancelled</option>
-            </select>
-            {errors?.status && (
-              <div className="text-danger">{errors.status}</div>
-            )}
-
-            <label htmlFor="expiryDate" className="form-label mt-3">
-              Expiry Date:
+            {/* Due Date */}
+            <label htmlFor="dueDate" className="form-label mt-3">
+              Due Date:
             </label>
             <input
+              className="form-control"
               type="date"
-              id="expiryDate"
               name="expiryDate"
-              className="form-control"
-              value={fieldValue.expiryDate}
+              required
               onChange={handleChange}
             />
-            {errors?.expiryDate && (
-              <div className="text-danger">{errors.expiryDate}</div>
+            {errors?.dueDate && (
+              <div className="text-danger">{errors.dueDate}</div>
             )}
-
-            <label htmlFor="note" className="form-label mt-3">
-              Note:
-            </label>
-            <input
-              type="text"
-              id="note"
-              name="note"
-              className="form-control"
-              value={fieldValue.note}
-              onChange={handleChange}
-            />
-            {errors?.note && <div className="text-danger">{errors.note}</div>}
           </div>
         </div>
 
-        <div>
-          <hr />
-          <h6 className="text-center">Items</h6>
+        {/* Items Table */}
+        <div className="mt-4">
           <Table
-            dataSource={items}
             columns={columns}
+            dataSource={items}
             pagination={false}
             rowKey="key"
-            bordered
-            scroll={{ x: "max-content" }}
+            footer={() => (
+              <Button
+                type="primary"
+                onClick={addItemHandler}
+                block
+                disabled={isSubmitting}
+              >
+                Add Item
+              </Button>
+            )}
           />
-          <div className="d-flex justify-content-end mt-3">
-            <Button type="primary" onClick={addItem}>
-              Add Item
-            </Button>
-          </div>
         </div>
 
-        <div className="d-flex justify-content-end mt-4">
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={isSubmitting}
+        {/* Submit Button */}
+        <div className="text-center mt-4">
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={isSubmitting}
+            disabled={isSubmitting || isSubmitted}
           >
-            {isSubmitting ? "Submitting..." : "Create Invoice"}
-          </button>
+            Submit
+          </Button>
         </div>
       </form>
-
-      {isSubmitted && !isSubmitting && (
-        <div className="alert alert-success mt-4">
-          Form submitted successfully!
-        </div>
-      )}
-
-      {errors?.form && !isSubmitting && (
-        <div className="alert alert-danger mt-4">{errors.form}</div>
-      )}
     </div>
   );
 }
