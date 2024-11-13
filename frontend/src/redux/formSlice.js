@@ -1,12 +1,15 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
+// Define form names as constants
 const FORM_NAMES = {
   INVOICE: "invoice",
   PAYMENT: "payment",
   CLIENT: "client",
+  EMPLOYEE: "employee", // New form name for employee
 };
 
+// Initial state for all forms, including the new EMPLOYEE form
 const initialState = {
   [FORM_NAMES.INVOICE]: {
     invoiceNumber: "",
@@ -30,6 +33,14 @@ const initialState = {
     phone: "",
     email: "",
     website: "",
+  },
+  [FORM_NAMES.EMPLOYEE]: {
+    // Initial state for employee
+    name: "",
+    email: "",
+    salary: "",
+    startDate: "",
+    position: "",
   },
   isSubmitted: false,
   isSubmitting: false,
@@ -58,12 +69,21 @@ const initialState = {
       email: "",
       website: "",
     },
+    [FORM_NAMES.EMPLOYEE]: {
+      // Error state for employee
+      name: "",
+      email: "",
+      salary: "",
+      startDate: "",
+      position: "",
+    },
   },
 };
 
 // Helper function to get form state by name
 const getFormState = (state, formName) => state.form[formName] || {};
 
+// Async thunk for recording a payment
 export const recordPayment = createAsyncThunk(
   "form/recordPayment",
   async (paymentData, { rejectWithValue }) => {
@@ -87,10 +107,10 @@ export const recordPayment = createAsyncThunk(
   }
 );
 
+// Async thunk for creating an invoice
 export const createInvoice = createAsyncThunk(
   "form/createInvoice",
   async (invoiceData, { rejectWithValue }) => {
-    console.log(invoiceData);
     try {
       const response = await axios.post(
         "http://localhost:3000/api/invoices/create",
@@ -111,6 +131,7 @@ export const createInvoice = createAsyncThunk(
   }
 );
 
+// Async thunk for submitting a client
 export const submitClient = createAsyncThunk(
   "form/submitClient",
   async (formData, { rejectWithValue }) => {
@@ -134,6 +155,31 @@ export const submitClient = createAsyncThunk(
   }
 );
 
+// Async thunk for creating an employee
+export const createEmployee = createAsyncThunk(
+  "form/createEmployee",
+  async (employeeData, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/api/employees/create",
+        employeeData
+      );
+      if (response.data.success) {
+        return response.data;
+      } else {
+        return rejectWithValue({
+          form: "An error occurred while creating the employee.",
+        });
+      }
+    } catch (error) {
+      return rejectWithValue({
+        form: error.response ? error.response.data : error.message,
+      });
+    }
+  }
+);
+
+// Redux slice for managing form state
 const formSlice = createSlice({
   name: "form",
   initialState,
@@ -227,7 +273,6 @@ const formSlice = createSlice({
         state.isSubmitting = false;
         state.errors[FORM_NAMES.INVOICE] = action.payload;
       })
-      // Add the case for recording a payment
       .addCase(recordPayment.pending, (state) => {
         state.isSubmitting = true;
         state.errors = {};
@@ -239,10 +284,24 @@ const formSlice = createSlice({
       .addCase(recordPayment.rejected, (state, action) => {
         state.isSubmitting = false;
         state.errors[FORM_NAMES.PAYMENT] = action.payload;
+      })
+      // Handling the employee async operations
+      .addCase(createEmployee.pending, (state) => {
+        state.isSubmitting = true;
+        state.errors = {};
+      })
+      .addCase(createEmployee.fulfilled, (state) => {
+        state.isSubmitting = false;
+        state.isSubmitted = true;
+      })
+      .addCase(createEmployee.rejected, (state, action) => {
+        state.isSubmitting = false;
+        state.errors[FORM_NAMES.EMPLOYEE] = action.payload;
       });
   },
 });
 
+// Export actions for use in components
 export const {
   setFieldValue,
   setSubmitting,
@@ -255,7 +314,12 @@ export const {
   updateItem,
 } = formSlice.actions;
 
+// Selector for getting form state by name
 export const selectFormState = (formName) => (state) =>
   getFormState(state, formName);
 
+export const selectEmployeeState = (state) =>
+  getFormState(state, FORM_NAMES.EMPLOYEE);
+
+// Export the reducer
 export default formSlice.reducer;

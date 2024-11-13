@@ -12,6 +12,9 @@ import RecordPayment from "./pages/Payment/RecordPayment";
 import Clients from "./pages/Client/Clients";
 import CreateClient from "./pages/Client/CreateClient";
 import ViewInvoice from "./pages/Invoice/ViewInvoice";
+import Employees from "./pages/Payroll/Employees";
+import CreateEmployee from "./pages/Payroll/CreateEmployee";
+import Attendence from "./pages/Payroll/Attendence";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -27,6 +30,9 @@ createRoot(document.getElementById("root")).render(
             <Route path="clients" element={<Clients />} />
             <Route path="create-client" element={<CreateClient />} />
             <Route path="view-invoice/:id" element={<ViewInvoice />} />
+            <Route path="employees" element={<Employees />} />
+            <Route path="create-employee" element={<CreateEmployee />} />
+            <Route path="attendence" element={<Attendence />} />
           </Route>
         </Routes>
       </Router>

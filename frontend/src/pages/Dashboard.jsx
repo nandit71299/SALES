@@ -28,10 +28,6 @@ function Dashboard() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleMenuClick = ({ key }) => {
-    console.log(key);
-  };
-
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sider
@@ -63,41 +59,61 @@ function Dashboard() {
         <Menu
           mode="inline"
           defaultSelectedKeys={["1"]}
-          onClick={handleMenuClick}
           style={{ height: "100%", borderRight: 0 }}
         >
           <Menu.Item key="1" icon={<HomeOutlined />}>
             <Link to="/">Home</Link>
           </Menu.Item>
+
           <Menu.Divider />
+
           <Menu.SubMenu key="sub1" icon={<DollarOutlined />} title="Payments">
             <Menu.Item key="2" icon={"₹"}>
               <Link to="/payments" style={{ marginLeft: "12px" }}>
                 Payments
               </Link>
             </Menu.Item>
+
             <Menu.Item key="3" icon={"₹"}>
               <Link to="/record-payment" style={{ marginLeft: "12px" }}>
                 Record Payment
               </Link>
             </Menu.Item>
           </Menu.SubMenu>
+
           <Menu.Divider />
 
           <Menu.SubMenu key="sub2" icon={<CopyOutlined />} title="Invoicing">
             <Menu.Item key="4">
               <Link to="/invoices">Invoices</Link>
             </Menu.Item>
+
             <Menu.Item key="5">
               <Link to="/create-invoice">Create Invoice</Link>
             </Menu.Item>
           </Menu.SubMenu>
+
           <Menu.SubMenu key="sub3" icon={<UserAddOutlined />} title="Clients">
             <Menu.Item key="6">
               <Link to="/clients">All Clients</Link>
             </Menu.Item>
+
             <Menu.Item key="7">
               <Link to="/create-client">Add Client</Link>
+            </Menu.Item>
+          </Menu.SubMenu>
+
+          <Menu.Divider />
+
+          <Menu.SubMenu key="sub4" icon={<UserOutlined />} title="Payroll">
+            <Menu.Item key="8">
+              <Link to="/employees">Employees</Link>
+            </Menu.Item>
+            <Menu.Item key="9">
+              <Link to="/create-employee">Create Employees</Link>
+            </Menu.Item>
+            <Menu.Item key="10">
+              <Link to="/attendence">Attendence</Link>
             </Menu.Item>
           </Menu.SubMenu>
         </Menu>
