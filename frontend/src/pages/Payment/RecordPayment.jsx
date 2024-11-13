@@ -29,7 +29,7 @@ function RecordPayment() {
   const invoices = useSelector(selectAllInvoices);
   const isLoading = useSelector(selectIsLoading);
   const error = useSelector(selectError);
-
+  console.log(error);
   // Fetch invoices when the component is mounted
   useEffect(() => {
     dispatch(fetchAllInvoices());
@@ -65,7 +65,7 @@ function RecordPayment() {
       dispatch(
         setError({
           formName: "payment",
-          field: "amount",
+          field: "pending_amount",
           message: "Amount is required.",
         })
       );
@@ -75,8 +75,8 @@ function RecordPayment() {
       dispatch(
         setError({
           formName: "payment",
-          field: "amount",
-          message: "Amount cannot be greater than invoice amount.",
+          field: "pending_amount",
+          message: "Amount cannot be greater than pending amount.",
         })
       );
       isValid = false;
@@ -166,8 +166,6 @@ function RecordPayment() {
   const selectedInvoice = invoices.find(
     (invoice) => Number(invoice.id) === Number(payment.invoice)
   );
-  console.log(selectedInvoice);
-
   return (
     <div className="container mt-5">
       <div className="row mb-4">
@@ -204,7 +202,7 @@ function RecordPayment() {
             {/* Display selected invoice details */}
             {selectedInvoice ? (
               <div className="text-muted mt-2">
-                <p>Invoice Amount: {selectedInvoice.amount}</p>
+                <p>Pending Amount: {selectedInvoice?.pending_amount || 0}</p>
               </div>
             ) : (
               <div className="text-muted mt-2">
@@ -212,8 +210,8 @@ function RecordPayment() {
               </div>
             )}
 
-            {errors?.invoice && (
-              <div className="text-danger">{errors.invoice}</div>
+            {errors?.pending_amount && (
+              <div className="text-danger">{errors?.pending_amount}</div>
             )}
 
             <label htmlFor="amount" className="form-label mt-3">

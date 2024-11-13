@@ -50,6 +50,7 @@ const initialState = {
       paymentMode: "",
       referenceNo: "",
       description: "",
+      pending_amount: "",
     },
     [FORM_NAMES.CLIENT]: {
       name: "",
