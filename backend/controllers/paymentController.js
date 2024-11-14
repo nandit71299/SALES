@@ -39,9 +39,10 @@ export const recordPayment = async (req, res) => {
     const newPayment = new Payment({
       id: paymentId,
       invoice_id: invoice.id,
-      amount,
+      amount: amount,
       method: payment_mode,
       reference_number,
+      company_id: invoice.company_id,
     });
 
     // Step 5: Save the payment record
@@ -53,7 +54,7 @@ export const recordPayment = async (req, res) => {
     if (invoice.pending_amount === 0) {
       invoice.status = 2; // Mark the invoice as paid
     }
-    invoice.payment_ids.push(paymentId);
+    invoice.payments.push(paymentId);
     await invoice.save();
     // Step 7: Return the success response with payment details
     return res.status(200).json({
@@ -70,7 +71,11 @@ export const recordPayment = async (req, res) => {
 
 export const getAll = async (req, res) => {
   try {
-    const payments = await Payment.find();
+    const { company_id } = req.query;
+    if (!company_id || company_id === undefined) {
+      return res.status(400).json({ message: "Invalid company_id" });
+    }
+    const payments = await Payment.find({ company_id });
     return res.json(payments);
   } catch (err) {
     return res

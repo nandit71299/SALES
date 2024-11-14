@@ -6,8 +6,17 @@ const Payment = dataModel.Payment;
 
 export const getDashboard = async (req, res) => {
   try {
-    const invoices = await Invoice.find().sort({ invoice_date: -1 }).limit(5);
-    const payments = await Payment.find().sort({ id: -1 }).limit(5);
+    const company_id = req.query.company_id;
+
+    if (!company_id || company_id == undefined) {
+      return res.status(400).json({ message: "Invalid company_id" });
+    }
+    const invoices = await Invoice.find({ company_id })
+      .sort({ invoice_date: -1 })
+      .limit(5);
+    const payments = await Payment.find({ company_id })
+      .sort({ id: -1 })
+      .limit(5);
 
     let draftInvoice = 0;
     let pendingInvoice = 0;

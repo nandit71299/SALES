@@ -59,7 +59,7 @@ function Dashboard() {
         <Menu
           mode="inline"
           defaultSelectedKeys={["1"]}
-          style={{ height: "100%", borderRight: 0 }}
+          style={{ overflowY: "scroll", height: "100%", borderRight: 0 }}
         >
           <Menu.Item key="1" icon={<HomeOutlined />}>
             <Link to="/">Home</Link>
@@ -106,15 +106,21 @@ function Dashboard() {
           <Menu.Divider />
 
           <Menu.SubMenu key="sub4" icon={<UserOutlined />} title="Payroll">
-            <Menu.Item key="8">
-              <Link to="/employees">Employees</Link>
-            </Menu.Item>
             <Menu.Item key="9">
               <Link to="/create-employee">Create Employees</Link>
             </Menu.Item>
-            <Menu.Item key="10">
-              <Link to="/attendence">Attendence</Link>
+            <Menu.Item key="8">
+              <Link to="/employees">All Employees</Link>
             </Menu.Item>
+
+            <Menu.SubMenu key="sub5" icon={<UserAddOutlined />} title="Leaves">
+              <Menu.Item key="10">
+                <Link to="/leaves">Leaves</Link>
+              </Menu.Item>
+              <Menu.Item key="11">
+                <Link to="/addleave">Add Employee Leave</Link>
+              </Menu.Item>
+            </Menu.SubMenu>
           </Menu.SubMenu>
         </Menu>
       </Sider>

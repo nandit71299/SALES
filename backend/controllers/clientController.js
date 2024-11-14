@@ -16,7 +16,7 @@ export const getClient = async (req, res) => {
 export const createClient = async (req, res) => {
   console.log("createClient");
   try {
-    const { name, email, website, phone } = req.body;
+    const { name, email, website, phone, company_id } = req.body;
 
     console.log(req.body);
     if (!name && !email)
@@ -30,6 +30,7 @@ export const createClient = async (req, res) => {
       email,
       website,
       phone,
+      company_id: company_id,
     });
     await newClient.save();
     return res.status(200).json({
@@ -77,7 +78,7 @@ export const updateClient = async (req, res) => {
 
 export const getAllClients = async (req, res) => {
   try {
-    const clients = await Client.find();
+    const clients = await Client.find({ company_id: req.query.company_id });
     return res.json(clients);
   } catch (err) {
     return res

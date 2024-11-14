@@ -8,7 +8,9 @@ import connectDB from "./config/db.js";
 import clientRoutes from "./routes/clientRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
-
+import employeeRoutes from "./routes/employeeRoutes.js";
+import authRoutes from "./routes/auth.js";
+import verifyToken from "./middleware/authTokenVerification.js";
 dotenv.config();
 
 const app = express();
@@ -22,6 +24,8 @@ app.use("/api/invoices", invoiceRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/employees", employeeRoutes);
+app.use("/api/auth", authRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello, World!");

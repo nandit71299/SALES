@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { Form, Input, Button, DatePicker, Select, notification } from "antd";
+import {
+  Form,
+  Input,
+  Button,
+  DatePicker,
+  Select,
+  notification,
+  message,
+} from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import {
   createEmployee,
@@ -33,6 +41,7 @@ function CreateEmployee() {
       salary: employeeState.salary || "",
       startDate: employeeState.startDate || "",
       position: employeeState.position || "",
+      password: employeeState.password || "",
     });
   }, [employeeState]);
 
@@ -46,27 +55,41 @@ function CreateEmployee() {
   };
 
   // Handle form submission
-  const handleSubmit = (values) => {
+  const handleSubmit = async (values) => {
     setLoading(true);
-    // Dispatch the createEmployee async action to save employee data
-    dispatch(createEmployee(values))
-      .then(() => {
+    try {
+      // Dispatch the createEmployee async action to save employee data
+      const resultAction = await dispatch(createEmployee(values));
+
+      // Check if the action was fulfilled (successful)
+      if (createEmployee.fulfilled.match(resultAction)) {
         setLoading(false);
-        notification.success({
-          message: "Employee Created",
-          description: "The employee has been successfully created.",
-        });
         dispatch(resetForm({ formName: "employee" })); // Optionally reset the form after success
-      })
-      .catch((error) => {
+        message.success("The employee has been successfully created");
+
+        console.log("HERE");
+        // Redirect after a delay
+        setTimeout(() => {
+          window.location.href = "/employees"; // Redirect to employees page after submission
+        }, 2000);
+      } else {
         setLoading(false);
+        // Handle failure case from the rejected action
         notification.error({
           message: "Error",
           description:
-            error.message ||
+            resultAction.payload?.form.message ||
             "Something went wrong while creating the employee.",
         });
+      }
+    } catch (error) {
+      setLoading(false);
+      notification.error({
+        message: "Error",
+        description:
+          error?.message || "Something went wrong while creating the employee.",
       });
+    }
   };
 
   return (
@@ -81,6 +104,7 @@ function CreateEmployee() {
           salary: formValues.salary,
           startDate: formValues.startDate ? moment(formValues.startDate) : null,
           position: formValues.position,
+          password: formValues.password,
         }}
       >
         {/* Name Field */}
@@ -111,6 +135,22 @@ function CreateEmployee() {
             value={formValues.email}
             onChange={(e) => handleFieldChange("email", e.target.value)}
             placeholder="Enter employee's email"
+          />
+        </Form.Item>
+
+        <Form.Item
+          label="Password"
+          name="password"
+          rules={[
+            { required: true, message: "Please enter the password" },
+            { type: "password", message: "Please enter a valid password" },
+          ]}
+        >
+          <Input
+            type="password"
+            value={formValues.password}
+            onChange={(e) => handleFieldChange("password", e.target.value)}
+            placeholder="Enter employee's password"
           />
         </Form.Item>
 

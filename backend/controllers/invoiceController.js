@@ -10,7 +10,7 @@ const Client = dataModel.Client;
 export const getInvoices = async (req, res) => {
   try {
     // Step 1: Fetch all invoices
-    const invoices = await Invoice.find();
+    const invoices = await Invoice.find({ company_id: req.query.company_id });
 
     // Step 2: For each invoice, fetch the corresponding client data
     const invoicesWithClientData = await Promise.all(
@@ -49,6 +49,7 @@ export const createInvoice = async (req, res) => {
     due_date,
     invoice_date,
     items,
+    company_id,
   } = req.body;
 
   if (
@@ -57,7 +58,8 @@ export const createInvoice = async (req, res) => {
     !amount ||
     !status ||
     !due_date ||
-    !invoice_date
+    !invoice_date ||
+    !company_id
   ) {
     return res.status(400).json({ message: "Missing required fields" });
   }
@@ -78,6 +80,7 @@ export const createInvoice = async (req, res) => {
       invoice_date: new Date(invoice_date),
       products: items,
       pending_amount: amount.toFixed(2),
+      company_id: Number(company_id),
     });
 
     await newInvoice.save();
